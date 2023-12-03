@@ -62,3 +62,32 @@ end
 
 test_equals(sum_ids_valid_games('input2.test.txt'), 8)
 puts sum_ids_valid_games('input2.txt')
+
+def sum_power_sets(file_name)
+    lines = read_file(file_name)
+    games = lines.map {|line|
+        parse_game(line)
+    }
+    games.map {|game|
+        power_set(game)
+    }.sum
+end
+
+def power_set(game)
+    set = {
+        'red' => 0,
+        'green' => 0,
+        'blue' => 0
+    }
+    game.each {|round|
+        round.each {|color, count|
+            if set[color] < count
+                set[color] = count
+            end
+        }
+    }
+    set.values.reduce(:*)
+end
+
+test_equals(sum_power_sets('input2.test.txt'), 2286)
+puts sum_power_sets('input2.txt')
