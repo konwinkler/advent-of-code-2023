@@ -113,3 +113,50 @@ test_equals(sum_adjacent('input3.test.txt'), 4361)
 puts sum_adjacent('input3.txt')
 # 431790 was too low
 # 534318 was too low
+
+def gear_ratio(file_name) 
+    lines = read_file(file_name)
+    height = lines.length
+    width = lines[0].length
+
+    numbers = []
+    lines.each_with_index {|line, line_index|
+        numbers.concat(parse_line(line, line_index, width, height))
+
+    }
+
+    # find all the gears
+    gears = []
+    lines.each_with_index {|line, y|
+        line.split('').each_with_index {|character, x|
+            if character == '*'
+                gears.push([x, y])
+            end
+        }
+    }
+
+    # find all the numbers that are adjacent to gears
+    gear_numbers = {}
+    gears.each {|gear|
+        gear_numbers[gear] = []
+    }
+    gears.each {|x, y|
+        numbers.each {|number, boundary|
+            if boundary.include?([x, y])
+                gear_numbers[[x, y]].push(number)
+            end
+        }
+    }
+
+    sum = 0
+    gear_numbers.each {|gear, numbers|
+        if numbers.length == 2
+            sum = sum + numbers[0] * numbers[1]
+        end
+    }
+    # binding.pry
+    sum
+end
+
+test_equals(gear_ratio('input3.test.txt'), 467835)
+puts gear_ratio('input3.txt')
