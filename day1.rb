@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'set'
 require 'pry'
 require 'pry-nav'
@@ -5,7 +7,7 @@ require 'json'
 require 'matrix'
 
 def read_file(file_name)
-    lines = File.read(file_name).split("\n")
+  File.read(file_name).split("\n")
 end
 
 def test_equals(actual, expected)
