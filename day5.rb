@@ -49,12 +49,19 @@ def follow_transition(seed, transition)
   seed
 end
 
-def follow_seed(seed, transitions)
-  # puts "start seed #{seed}"
+def cache
+  @cache ||= {}
+end
+
+def follow_seed(seed, transitions, use_cache: false)
+  return cache[seed] if use_cache && cache[seed]
+
+  original_seed = seed
   transitions.each do |transition|
     seed = follow_transition(seed, transition)
-    # puts "seed is now #{seed}"
   end
+
+  cache[original_seed] = seed if use_cache
   seed
 end
 test_equals follow_seed(0, [[[(0..2), ->(x) { x + 1 }]]]), 1
@@ -67,12 +74,35 @@ def lowest_location(file_name)
   seeds = sections[0].split(': ')[1].split(' ').map(&:to_i)
   transitions = sections.drop(1).map { |section| parse_map_string(section) }
 
-  # follow each seed through all the mappings
-  locations = seeds.map do |seed| follow_seed(seed, transitions) end
-  # choose the lowest seed
+  locations = seeds.map { |seed| follow_seed(seed, transitions) }
 
   locations.min
 end
 
 test_equals lowest_location('input5.test.txt'), 35
 puts lowest_location('input5.txt')
+
+def follow_seeds(seeds, transitions)
+  total = []
+  binding.pry
+  seeds.each_slice(2) do |start, range|
+    locations = (start..start + range).map { |seed| follow_seed(seed, transitions, use_cache: true) }
+    total += locations
+    puts "done with #{start} to #{start + range}"
+  end
+  total
+end
+
+def lowest_location_ranges(file_name)
+  sections = File.read(file_name).split("\n\n")
+  seeds = sections[0].split(': ')[1].split(' ').map(&:to_i)
+  transitions = sections.drop(1).map { |section| parse_map_string(section) }
+
+  locations = follow_seeds(seeds, transitions)
+
+  locations.min
+end
+
+test_equals lowest_location_ranges('input5.test.txt'), 46
+cache.clear
+puts lowest_location_ranges('input5.txt')
