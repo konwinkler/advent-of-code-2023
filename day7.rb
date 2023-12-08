@@ -3,8 +3,6 @@
 require 'set'
 require 'pry'
 require 'pry-nav'
-require 'json'
-require 'matrix'
 
 def read_file(file_name)
   File.read(file_name).split("\n")
@@ -29,10 +27,24 @@ module Type
   FIVE_OF_A_KIND = 6
 end
 
-# rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
-def determine_type(hand)
+def counts(cards, jokers: false)
+  if !jokers
+    cards.group_by { |card| card }.map { |_, group| group.size }.sort.reverse
+  else
+    # remove jokers
+    without_jokers = cards.reject { |card| card == 'J' }
+    return [5] if without_jokers.size == 0 # special case for all jokers
+    counts_jokers = cards.size - without_jokers.size
+    first_counts = without_jokers.group_by { |card| card }.map { |_, group| group.size }.sort.reverse
+    first_counts[0] += counts_jokers
+    first_counts
+  end
+end
+
+# rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metics/AbcSize, Metrics/PerceivedComplexity
+def determine_type(hand, jokers: false)
   cards = hand.split('')
-  counts = cards.group_by { |card| card }.map { |_, group| group.size }.sort.reverse
+  counts = counts(cards, jokers: jokers)
   # binding.pry
   case counts
   when [5]
@@ -51,7 +63,7 @@ def determine_type(hand)
     Type::HIGH_CARD
   end
 end
-# rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
+# rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metics/AbcSize, Metrics/PerceivedComplexity
 test_equals determine_type('AAAAA'), Type::FIVE_OF_A_KIND
 test_equals determine_type('AAAA1'), Type::FOUR_OF_A_KIND
 test_equals determine_type('23332'), Type::FULL_HOUSE
@@ -59,10 +71,14 @@ test_equals determine_type('23432'), Type::TWO_PAIR
 test_equals determine_type('A23A4'), Type::ONE_PAIR
 test_equals determine_type('23456'), Type::HIGH_CARD
 test_equals determine_type('T55J5'), Type::THREE_OF_A_KIND
+test_equals determine_type('QJJQ2', jokers: true), Type::FOUR_OF_A_KIND
+test_equals determine_type('JKKK2', jokers: true), Type::FOUR_OF_A_KIND
+test_equals determine_type('23432', jokers: true), Type::TWO_PAIR
+test_equals determine_type('JJJJJ', jokers: true), Type::FIVE_OF_A_KIND
 
 def compare_same_type(left, right)
-  left_rank = left.split('').map { |card| '23456789TJQKA'.index(card) }
-  right_rank = right.split('').map { |card| '23456789TJQKA'.index(card) }
+  left_rank = left.split('').map { |card| 'J23456789TJQKA'.index(card) }
+  right_rank = right.split('').map { |card| 'J23456789TJQKA'.index(card) }
   pairs = left_rank.zip(right_rank)
   comparisons = pairs.map { |pair| pair[0] <=> pair[1] }
   comparisons.each do |comparison|
@@ -73,19 +89,21 @@ end
 test_equals compare_same_type('K', 'T'), 1
 test_equals compare_same_type('2', '2'), 0
 test_equals compare_same_type('2', 'K'), -1
+test_equals compare_same_type('J', '2'), -1
 
 # hand cards and bid value
 class Hand
-  attr_reader :cards, :bid
+  attr_reader :cards, :bid, :jokers
 
-  def initialize(cards, bid)
+  def initialize(cards, bid, jokers: false)
     @cards = cards
     @bid = bid
+    @jokers = jokers
   end
 
   def <=>(other)
-    left_type = determine_type(@cards)
-    right_type = determine_type(other.cards)
+    left_type = determine_type(@cards, jokers: @jokers)
+    right_type = determine_type(other.cards, jokers: other.jokers)
     if left_type != right_type
       left_type <=> right_type
     else
@@ -93,18 +111,19 @@ class Hand
     end
   end
 end
+# binding.pry
 test_equals(Hand.new('32T3K', 0) <=> Hand.new('KK677', 0), -1)
 test_equals(Hand.new('KK677', 0) <=> Hand.new('T55J5', 0), -1)
 test_equals(Hand.new('KK677', 0) <=> Hand.new('KTJJT', 0), 1)
 
 # this is a sorting problem
 # have to be able to compare two hands
-def winning_total(file_name)
+def winning_total(file_name, jokers: false)
   lines = read_file(file_name)
 
   hands = lines.map do |line|
     parts = line.split(' ')
-    Hand.new(parts[0], parts[1].to_i)
+    Hand.new(parts[0], parts[1].to_i, jokers: jokers)
   end
 
   sorted_hands = hands.sort
@@ -118,3 +137,6 @@ end
 
 test_equals winning_total('input7.test.txt'), 6440
 puts winning_total('input7.txt')
+
+test_equals winning_total('input7.test.txt', jokers: true), 5905
+puts winning_total('input7.txt', jokers: true)
