@@ -66,3 +66,12 @@ end
 
 test_equals multiply_ways_to_win('input6.test.txt'), 288
 puts multiply_ways_to_win('input6.txt')
+
+def multiply_ways_to_win_single(file_name)
+  lines = read_file(file_name)
+  time = lines[0].split(':')[1].split(' ').join('').to_i
+  distance = lines[1].split(':')[1].split(' ').join('').to_i
+  winning_range [time, distance]
+end
+test_equals multiply_ways_to_win_single('input6.test.txt'), 71_503
+puts multiply_ways_to_win_single('input6.txt')
